@@ -22,7 +22,7 @@ jobs:
       - name: Check Media Files
         run: |
           # Sirf 2 set of files check karein
-          if [ ! -f "video1.mp4" ] || [ ! -f "audio1.mp3" ]; then echo "Set 1 missing!" && exit 1; fi
+          if [ ! -f "video.mp4" ] || [ ! -f "audio.mp3" ]; then echo "Set 1 missing!" && exit 1; fi
           if [ ! -f "video2.mp4" ] || [ ! -f "audio2.mp3" ]; then echo "Set 2 missing!" && exit 1; fi
 
       - name: Start 4 Live Streams
@@ -37,10 +37,10 @@ jobs:
           echo "Starting 4 parallel streams for 5:50:00..."
 
           # Stream 1 (Using Set 1)
-          ffmpeg -re -stream_loop -1 -i video1.mp4 -stream_loop -1 -i audio1.mp3 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -b:v 1500k -c:a aac -b:a 128k -t 05:50:00 -f flv "$S1" &
+          ffmpeg -re -stream_loop -1 -i video.mp4 -stream_loop -1 -i audio.mp3 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -b:v 1500k -c:a aac -b:a 128k -t 05:50:00 -f flv "$S1" &
 
           # Stream 2 (Using Set 1)
-          ffmpeg -re -stream_loop -1 -i video1.mp4 -stream_loop -1 -i audio1.mp3 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -b:v 1500k -c:a aac -b:a 128k -t 05:50:00 -f flv "$S2" &
+          ffmpeg -re -stream_loop -1 -i video.mp4 -stream_loop -1 -i audio.mp3 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -b:v 1500k -c:a aac -b:a 128k -t 05:50:00 -f flv "$S2" &
 
           # Stream 3 (Using Set 2)
           ffmpeg -re -stream_loop -1 -i video2.mp4 -stream_loop -1 -i audio2.mp3 -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -b:v 1500k -c:a aac -b:a 128k -t 05:50:00 -f flv "$S3" &
