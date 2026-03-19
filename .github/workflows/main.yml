@@ -1,9 +1,13 @@
-name: 24/7 Quad-Stream (Single Source - Loop & Reverse)
+name: 24/7 Quad-Stream (Node 24 Fix & Optimized Reverse)
 
 on:
   workflow_dispatch:
   repository_dispatch:
     types: [restart_stream]
+
+env:
+  # Node.js 20 ki warning ko khatam karne ke liye
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   stream:
@@ -21,9 +25,9 @@ jobs:
 
       - name: Check Media Files
         run: |
-          # Sirf video5 aur audio5 check karein
-          if [ ! -f "video5.mp4" ] || [ ! -f "audio5.mp3" ]; then 
-            echo "Error: video5.mp4 or audio5.mp3 missing!" 
+          # Check for video.mp4 and audio.mp3
+          if [ ! -f "video.mp4" ] || [ ! -f "audio.mp3" ]; then 
+            echo "Error: video.mp4 or audio.mp3 missing!" 
             exit 1
           fi
 
@@ -35,18 +39,16 @@ jobs:
           S4: ${{ secrets.STREAM_4_URL }}
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          echo "Starting 4 parallel streams with Loop + Reverse..."
+          echo "Starting 4 parallel streams with Loop + Reverse (Optimized)..."
 
-          # Command explain: 
-          # [0:v]reverse[r]; [0:v][r]concat - Video ko pehle seedha phir ulta jodta hai
-          # -stream_loop -1 - Audio aur video ko infinity tak loop karta hai
-          
-          FF_CMD="-re -stream_loop -1 -i video5.mp4 -stream_loop -1 -i audio5.mp3 \
+          # [0:v]reverse filter RAM consume karta hai, isliye bitrate thoda kam rakha hai 
+          # taaki 4 parallel streams crash na hon.
+          FF_CMD="-re -stream_loop -1 -i video.mp4 -stream_loop -1 -i audio.mp3 \
           -filter_complex '[0:v]reverse[r];[0:v][r]concat=n=2:v=1:a=0[v]' \
-          -map '[v]' -map 1:a:0 -c:v libx264 -preset ultrafast -b:v 1500k \
-          -c:a aac -b:a 128k -t 05:50:00 -f flv"
+          -map '[v]' -map 1:a:0 -c:v libx264 -preset ultrafast -tune zerolatency \
+          -b:v 1200k -c:a aac -b:a 128k -t 05:45:00 -f flv"
 
-          # Charo streams ek hi source se start hongi
+          # 4 parallel streams
           ffmpeg $FF_CMD "$S1" &
           ffmpeg $FF_CMD "$S2" &
           ffmpeg $FF_CMD "$S3" &
@@ -59,4 +61,3 @@ jobs:
           -H "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/${{ github.repository }}/dispatches \
           -d '{"event_type": "restart_stream"}'
-          
