@@ -1,4 +1,4 @@
-name: 24/7 Quad-Stream (Node 24 Fix & Optimized Reverse)
+name: 24/7 Quad-Stream (Final Stable Fix)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     types: [restart_stream]
 
 env:
-  # Node.js 20 ki warning ko khatam karne ke liye
+  # Node 20 ki warning hatane ke liye
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -25,9 +25,8 @@ jobs:
 
       - name: Check Media Files
         run: |
-          # Check for video5.mp4 and audio5.mp3
           if [ ! -f "video5.mp4" ] || [ ! -f "audio5.mp3" ]; then 
-            echo "Error: video.mp4 or audio.mp3 missing!" 
+            echo "Error: Files missing!" 
             exit 1
           fi
 
@@ -39,24 +38,23 @@ jobs:
           S4: ${{ secrets.STREAM_4_URL }}
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          echo "Starting 4 parallel streams with Loop + Reverse (Optimized)..."
+          echo "Starting 4 parallel streams (No heavy filters for stability)..."
 
-          # [0:v]reverse filter RAM consume karta hai, isliye bitrate thoda kam rakha hai 
-          # taaki 4 parallel streams crash na hon.
-          FF_CMD="-re -stream_loop -1 -i video.mp4 -stream_loop -1 -i audio.mp3 \
-          -filter_complex '[0:v]reverse[r];[0:v][r]concat=n=2:v=1:a=0[v]' \
-          -map '[v]' -map 1:a:0 -c:v libx264 -preset ultrafast -tune zerolatency \
-          -b:v 1200k -c:a aac -b:a 128k -t 05:45:00 -f flv"
+          # Stable Command: Bina complex filter ke taaki 5:50 hrs tak chale
+          FF_CMD="-re -stream_loop -1 -i video5.mp4 -stream_loop -1 -i audio5.mp3 \
+          -map 0:v:0 -map 1:a:0 -c:v libx264 -preset ultrafast -tune zerolatency \
+          -pix_fmt yuv420p -b:v 1500k -c:a aac -b:a 128k -t 05:50:00 -f flv"
 
-          # 4 parallel streams
+          # Charo streams start ho rahi hain
           ffmpeg $FF_CMD "$S1" &
           ffmpeg $FF_CMD "$S2" &
           ffmpeg $FF_CMD "$S3" &
           ffmpeg $FF_CMD "$S4" &
 
+          # Wait command yahan process ko rok kar rakhega
           wait
 
-          echo "All streams finished. Re-triggering..."
+          echo "Stream finished normally. Re-triggering..."
           curl -X POST -H "Authorization: token $GH_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/${{ github.repository }}/dispatches \
